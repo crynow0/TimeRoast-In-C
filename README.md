@@ -26,9 +26,9 @@ This script sends crafted SNTP requests to a Windows Domain Controller (DC) over
 | `-o`   | `<file>`      | Write hashes to file instead of `stdout`                                     |
 
 
-## Usage example:
-gcc -Wall -O2 -o timeroast timeroast.c
+### Usage example:
+```bash
 sudo ./timeroast -d <ip_addr> -r <numbers_range> -o hashes.txt
-
-Acknowledgements
+```
+#### Acknowledgements
 Thanks to @tifkin for the original PoC and research.
