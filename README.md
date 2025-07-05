@@ -31,4 +31,4 @@ This script sends crafted SNTP requests to a Windows Domain Controller (DC) over
 sudo ./timeroast -d <ip_addr> -r <numbers_range> -o hashes.txt
 ```
 #### Acknowledgements
-Thanks to @tifkin for the original PoC and research.
+Thanks to Tom Tervoort for the original PoC and research.
